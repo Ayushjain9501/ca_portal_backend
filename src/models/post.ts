@@ -6,7 +6,8 @@ const postSchema = new mongoose.Schema({
     imageURL: { type: String, required: false },
     content: { type: String, required: false },
     expTime: { type: Date, required: true },
-    maxShare: { type: Number, required: false, default: 10 }
+    maxShare: { type: Number, required: false, default: 10 },
+    totalShares:  { type: Number, required: false, default: 0 }
 });
 
 postSchema.set('toJSON', { getters: true, virtuals: true });

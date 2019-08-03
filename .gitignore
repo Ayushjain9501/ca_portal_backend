@@ -46,4 +46,6 @@ testem.log
 Thumbs.db
 
 # configs
-keys.ts
+keys.prod.ts
+# keys.dev.ts
+/build

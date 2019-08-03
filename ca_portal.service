@@ -2,14 +2,14 @@
 Description=Campus Ambassador Portal
 
 [Service]
-ExecStart=/home/ec2-user/ca_portal/server/build/index.js
+ExecStart=/var/www/ca_portal/server/build/index.js
 Restart=always
 User=nobody
 # Note Debian/Ubuntu uses 'nogroup', RHEL/Fedora uses 'nobody'
-Group=nobody
+Group=nogroup
 Environment=PATH=/usr/bin:/usr/local/bin
 Environment=NODE_ENV=production
-WorkingDirectory=/home/ec2-user/ca_portal/server
+WorkingDirectory=/var/www/ca_portal/server
 
 [Install]
 WantedBy=multi-user.target

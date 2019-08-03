@@ -4,6 +4,7 @@ const userSchema = new mongoose.Schema(
     {
         name: { type: String, required: true },
         email: { type: String, required: false },
+        regData: { type: mongoose.Schema.Types.ObjectId, ref: 'regdata' },
         fbUserId: { type: String, required: true },
         fbToken: { type: String, require: false },
         totalPoints: { type: Number, require: true, default: 0 }, // Overall Points 
@@ -16,7 +17,8 @@ const userSchema = new mongoose.Schema(
             shares: { type: Number, default: 0 }
         }],
         tasksCompleted: [{
-            taskid: { type: mongoose.Schema.Types.ObjectId, ref: 'task' }
+            taskid: { type: mongoose.Schema.Types.ObjectId, ref: 'task' },
+            completedOn: { type: Date, required: false }
         }]
     }
 );

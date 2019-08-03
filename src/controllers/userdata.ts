@@ -67,7 +67,7 @@ export async function getPosts(req: authRequest, res: express.Response) {
     }
     try {
         let currTime = new Date();
-        const posts = await Post.find({ expTime: { $gt: currTime } }).sort({"expTime": -1});
+        const posts:any = await Post.find({ expTime: { $gt: currTime } }).sort({"expTime": -1});
         let resData = [];
 
         for (let i = 0; i < posts.length; i++) {
@@ -110,7 +110,7 @@ export async function getTasks(req: authRequest, res: express.Response) {
     }
     try {
         let currTime = new Date();
-        const tasks = await Task.find({ expTime: { $gt: currTime } }).sort({"expTime": -1});
+        const tasks:any = await Task.find({ expTime: { $gt: currTime } }).sort({"expTime": -1});
         let resData = [];
 
         for (let i = 0; i < tasks.length; i++) {
@@ -140,7 +140,7 @@ export async function getTasks(req: authRequest, res: express.Response) {
 
 export async function getDataSummery(req: authRequest, res: express.Response) {
 
-    const user = await User.findById(req.userID);
+    const user:any = await User.findById(req.userID);
     if (!user) {
         res.status(405).json({
             Error: "Error user not found",
@@ -195,8 +195,8 @@ export async function getDataCount(req: authRequest, res: express.Response) {
     }
     try {
         const currTime = new Date();
-        const totalPosts = await Post.count({ expTime: { $gt: currTime } });
-        const totalTasks = await Task.count({ expTime: { $gt: currTime } });
+        const totalPosts = await Post.countDocuments({ expTime: { $gt: currTime } });
+        const totalTasks = await Task.countDocuments({ expTime: { $gt: currTime } });
 
         res.status(200).json({
             totalPosts: totalPosts,
@@ -212,7 +212,7 @@ export async function getDataCount(req: authRequest, res: express.Response) {
 }
 
 export async function increasePoints(req: authRequest, res: express.Response) {
-    const user = await User.findById(req.userID);
+    const user:any = await User.findById(req.userID);
     const postID_encoded = req.body.ID;
     if (!user) {
         res.status(405).json({
@@ -232,7 +232,7 @@ export async function increasePoints(req: authRequest, res: express.Response) {
         let postID_decoded = base64.decode(postID_encoded);
         console.log(postID_decoded);
         let postsShared = await user.postShared;
-        let post = await Post.findById(postID_decoded);
+        let post:any = await Post.findById(postID_decoded);
         let date = new Date();
         let need_upsert = true; // Do we need to create a new entry in user->postShared
 
@@ -253,11 +253,13 @@ export async function increasePoints(req: authRequest, res: express.Response) {
                     return;
                 }
                 need_upsert = false;
+                post.totalShares += 1;
                 postsShared[i].shares += 1;
                 user.totalPostsShared += 1;
                 user.totalPoints += DEFAULT_POST_CREDIT;
                 await user.save();
-
+                await post.save();
+                break;
             }
         }
         if (need_upsert) {
@@ -265,9 +267,11 @@ export async function increasePoints(req: authRequest, res: express.Response) {
                 postid: post._id,
                 shares: 1
             });
+            post.totalShares += 1;
             user.totalPostsShared += 1;
             user.totalPoints += DEFAULT_POST_CREDIT;
             await user.save();
+            await post.save();
         }
         res.status(200).json({
             count: 1,
