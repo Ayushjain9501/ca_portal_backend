@@ -3,9 +3,13 @@ import base64 = require('base-64');
 import User = require('../models/user');
 import Post = require('../models/post');
 import Task = require('../models/task');
+import Coupon50 = require('../models/coupon50');
+import Coupon100 = require('../models/coupon100');
 import { DEFAULT_POST_CREDIT } from "../config/keys";
 import { authRequest } from "../helpers/req";
 import { createSamplePost, createSampleTask } from "../helpers/user";
+
+var ObjectId = require('mongoose').Types.ObjectId;
 
 
 async function getShares(user: any, postID: string) {
@@ -33,7 +37,7 @@ async function getTaskStatus(user: any, taskID: string) {
 
 function getRank(sorted: any, userid: string) {
     let i = 0;
-    for (; i < sorted.length ; i++) {
+    for (; i < sorted.length; i++) {
         if (String(sorted[i]._id) == String(userid)) {
             return i + 1;
         }
@@ -67,7 +71,7 @@ export async function getPosts(req: authRequest, res: express.Response) {
     }
     try {
         let currTime = new Date();
-        const posts:any = await Post.find({ expTime: { $gt: currTime } }).sort({"expTime": -1});
+        const posts: any = await Post.find({ expTime: { $gt: currTime } }).sort({ "expTime": -1 });
         let resData = [];
 
         for (let i = 0; i < posts.length; i++) {
@@ -110,7 +114,7 @@ export async function getTasks(req: authRequest, res: express.Response) {
     }
     try {
         let currTime = new Date();
-        const tasks:any = await Task.find({ expTime: { $gt: currTime } }).sort({"expTime": -1});
+        const tasks: any = await Task.find({ expTime: { $gt: currTime } }).sort({ "expTime": -1 });
         let resData = [];
 
         for (let i = 0; i < tasks.length; i++) {
@@ -140,7 +144,7 @@ export async function getTasks(req: authRequest, res: express.Response) {
 
 export async function getDataSummery(req: authRequest, res: express.Response) {
 
-    const user:any = await User.findById(req.userID);
+    const user: any = await User.findById(req.userID);
     if (!user) {
         res.status(405).json({
             Error: "Error user not found",
@@ -152,6 +156,7 @@ export async function getDataSummery(req: authRequest, res: express.Response) {
         let leaderBoard = [];
         let sorted = [];
         let totalPoints, postsShared, rank, refCode, tasksCompleted, ticketsBooked, userName;
+        let userCoupons = await  user.redeemed_coupons;
 
         totalPoints = Number(user.totalPoints);
         userName = String(user.name);
@@ -160,7 +165,7 @@ export async function getDataSummery(req: authRequest, res: express.Response) {
         ticketsBooked = Number(user.ticketsBooked);
         tasksCompleted = await Number(user.tasksCompleted.length);
 
-        sorted = await User.find().sort({"totalPoints": -1, "tasksCompleted": -1, "ticketsBooked": -1});
+        sorted = await User.find().sort({ "totalPoints": -1, "tasksCompleted": -1, "ticketsBooked": -1 });
         rank = await getRank(sorted, user._id);
         leaderBoard = await getLeaderboard(sorted.slice(0, 10));
 
@@ -173,7 +178,8 @@ export async function getDataSummery(req: authRequest, res: express.Response) {
             ticketsBooked: ticketsBooked,
             tasksCompleted: tasksCompleted,
             rank: rank,
-            leaderBoard: leaderBoard
+            leaderBoard: leaderBoard,
+            userCoupons: userCoupons
         });
     } catch (error) {
         res.status(406).json({
@@ -183,6 +189,7 @@ export async function getDataSummery(req: authRequest, res: express.Response) {
     }
     return;
 }
+
 
 export async function getDataCount(req: authRequest, res: express.Response) {
     const user = await User.findById(req.userID);
@@ -212,7 +219,7 @@ export async function getDataCount(req: authRequest, res: express.Response) {
 }
 
 export async function increasePoints(req: authRequest, res: express.Response) {
-    const user:any = await User.findById(req.userID);
+    const user: any = await User.findById(req.userID);
     const postID_encoded = req.body.ID;
     if (!user) {
         res.status(405).json({
@@ -232,7 +239,7 @@ export async function increasePoints(req: authRequest, res: express.Response) {
         let postID_decoded = base64.decode(postID_encoded);
         console.log(postID_decoded);
         let postsShared = await user.postShared;
-        let post:any = await Post.findById(postID_decoded);
+        let post: any = await Post.findById(postID_decoded);
         let date = new Date();
         let need_upsert = true; // Do we need to create a new entry in user->postShared
 
@@ -245,7 +252,7 @@ export async function increasePoints(req: authRequest, res: express.Response) {
         }
         for (let i = 0; i < postsShared.length; i++) {
             if (String(postsShared[i].postid) == postID_decoded) {
-                if (post.maxShare <= postsShared[i].shares)  {
+                if (post.maxShare <= postsShared[i].shares) {
                     res.status(403).json({
                         Error: "Max Shares reached",
                         ErrorDescription: "Can't increase post shares as the max shares are reached"
@@ -293,4 +300,104 @@ export function dataHandleError(error: any, req: authRequest, res: express.Respo
         ErrorDescription: (error) ? error.message : "No description provided"
     })
     return;
+}
+
+
+export async function getCoupon(req: authRequest, res: express.Response) {
+    const user: any = await User.findById(req.userID);
+    if (!user) {
+        res.status(405).json({
+            Error: "Error user not found",
+            ErrorDescription: "token is valid but userID is not valid"
+        })
+        return;
+    }
+    try {
+        let ticketSold = Number(user.ticketsBooked);
+        let reedemedCouponsLength = await Number(user.redeemed_coupons.length);
+        let userId = user._id;
+
+        if (ticketSold >= 10 && reedemedCouponsLength!=2) {
+            
+            let coupon: any = await findNullCoupon100(userId); 
+
+            user.redeemed_coupons.push({
+                coupon_id: coupon._id,
+                coupon_code: coupon.coupon_code,
+                coupon_type: 100, 
+                redeem_date: coupon.redeem_date
+            });
+            user.save();
+
+            res.status(200).json({
+                fetched : true,
+                coupon_code: coupon.coupon_code
+            });
+
+        }
+        else if (ticketSold >= 5 && reedemedCouponsLength == 0) {
+           
+            let coupon: any = await findNullCoupon50(userId); 
+
+            user.redeemed_coupons.push({
+                coupon_id: coupon._id,
+                coupon_code: coupon.coupon_code,
+                coupon_type: 50, 
+                redeem_date: coupon.redeem_date
+            });
+            user.save();
+
+            res.status(200).json({
+                fetched : true,
+                coupon_code: coupon.coupon_code
+            })
+        
+        }
+        else {
+        res.status(200).json({
+            fetched : false,
+            coupon_code : "Don't be Greedy!!!"
+        });
+    }
+   
+    } catch (error) {
+        res.status(406).json({
+            Error: "Internal Database Error",
+            ErrorDescription: (error) ? error.message : "No description provided"
+        });
+    }
+
+return;
+
+}
+
+async function findNullCoupon50(userId: string) {
+    let coupon: any;
+    coupon = await Coupon50.findOne({ "user_id": null });
+    
+    try {
+        coupon.user_id = userId;
+        coupon.redeem_date = new Date();
+        await coupon.save();
+    }
+    catch (error) {
+        console.log(error);
+    };
+    return coupon;
+}
+
+async function findNullCoupon100(userId: string) {
+    let coupon: any;
+    coupon = await Coupon100.findOne({ "user_id": null });
+    
+    try {
+        coupon.user_id = userId;
+        coupon.redeem_date = new Date();
+        await coupon.save();
+    }
+    catch (error) {
+        console.log(error);
+    };
+    return coupon;
+
 }

@@ -3,7 +3,7 @@ import jwt = require('jsonwebtoken');
 import express = require('express');
 import passport = require('passport');
 import { authEnsureLogin, authHandleError } from "../controllers/auth";
-import { getPosts, getTasks, getDataSummery, dataHandleError, getDataCount, increasePoints } from "../controllers/userdata";
+import { getPosts, getTasks, getDataSummery, dataHandleError, getDataCount, increasePoints,getCoupon} from "../controllers/userdata";
 
 const router = express.Router();
 
@@ -40,5 +40,12 @@ router.route('/postgain').post(
     increasePoints,
     dataHandleError
 );
+
+//Redeem Coupons
+router.route('/redeem').get(
+    authEnsureLogin,
+    getCoupon,
+    dataHandleError
+)
 
 export = router;

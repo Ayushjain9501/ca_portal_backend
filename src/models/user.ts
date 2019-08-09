@@ -19,6 +19,12 @@ const userSchema = new mongoose.Schema(
         tasksCompleted: [{
             taskid: { type: mongoose.Schema.Types.ObjectId, ref: 'task' },
             completedOn: { type: Date, required: false }
+        }],
+        redeemed_coupons: [{
+            coupon_id: { type: mongoose.Schema.Types.ObjectId, required: false},
+            coupon_code: { type: String, required: false},
+            redeem_date: { type: Date, required: false},
+            coupon_type: { type: Number, required: false} //50 or 100
         }]
     }
 );
